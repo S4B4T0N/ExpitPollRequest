@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 void main() => runApp(const MainApp());
@@ -8,13 +9,15 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false, // vypne ten napis debug
       theme: ThemeData(
+        //  light rezim
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF2E7D32), // zelená – „data/vox“
+        colorSchemeSeed: const Color.fromARGB(255, 70, 197, 98),
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
+        // Dark rezim
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF2E7D32),
         brightness: Brightness.dark,
@@ -41,62 +44,74 @@ class HomeScreen extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.asset('assets/pozadie/pozadie.jpg', fit: BoxFit.cover),
-          // jemný overlay pre čitateľnosť
-          Container(
-            color: const Color.fromARGB(255, 175, 95, 95).withOpacity(0.12),
-          ),
+          Container(color: Colors.black.withOpacity(0.12)),
           Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Card(
-                elevation: 4,
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Hlavné menu',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                // voliteľné – jemné rozmazanie za kartou
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Card(
+                    elevation: 2, // M3 povrch a tieň
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      side: BorderSide(
+                        color: Colors.white.withOpacity(0.28),
+                        width: 1,
                       ),
-                      const SizedBox(height: 16),
-                      // Wrap = responzívne rozloženie (2×2 na menších)
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 12,
-                        runSpacing: 12,
+                    ),
+                    color: cs.surface.withOpacity(0.32),
+                    surfaceTintColor: Colors.white, // M3 tint
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _MenuButton(
-                            icon: Icons.push_pin,
-                            label: 'Pridat osobu',
-                            onTap: () {},
-                            color: cs.primary,
+                          const Text(
+                            'Hlavné menu',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          _MenuButton(
-                            icon: Icons.auto_graph,
-                            label: 'Grafy',
-                            onTap: () {},
-                            color: cs.secondary,
-                          ),
-                          _MenuButton(
-                            icon: Icons.settings,
-                            label: 'Nastavenia',
-                            onTap: () {},
-                            color: cs.tertiary,
-                          ),
-                          _MenuButton(
-                            icon: Icons.help_outline,
-                            label: 'Nápoveda',
-                            onTap: () {},
-                            color: cs.error,
+                          const SizedBox(height: 16),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _MenuButton(
+                                icon: Icons.person,
+                                label: 'Pridat osobu',
+                                color: cs.primary,
+                                onTap: () {},
+                              ),
+                              _MenuButton(
+                                icon: Icons.numbers,
+                                label: 'Grafy',
+                                color: cs.secondary,
+                                onTap: () {},
+                              ),
+                              _MenuButton(
+                                icon: Icons.settings,
+                                label: 'Nastavenia',
+                                color: cs.tertiary,
+                                onTap: () {},
+                              ),
+                              _MenuButton(
+                                icon: Icons.help_outline,
+                                label: 'Nápoveda',
+                                color: cs.error,
+                                onTap: () {},
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -112,14 +127,14 @@ class _MenuButton extends StatelessWidget {
   const _MenuButton({
     required this.icon,
     required this.label,
-    required this.onTap,
     required this.color,
+    required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
   final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -130,10 +145,13 @@ class _MenuButton extends StatelessWidget {
         icon: Icon(icon),
         label: Text(label),
         style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          foregroundColor: Colors.white,
-          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
     );
