@@ -1,5 +1,7 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import 'package:exit_poll_request/screens/pridaj_osobu.dart';
+import 'package:exit_poll_request/widgets/glass_card.dart';
 
 void main() => runApp(const MainApp());
 
@@ -84,7 +86,14 @@ class HomeScreen extends StatelessWidget {
                                 icon: Icons.person,
                                 label: 'Pridat osobu',
                                 color: cs.primary,
-                                onTap: () {},
+                                onTap: () {
+                                  debugPrint('tap pridaj_osobu');
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const PridajOsobu(),
+                                    ),
+                                  );
+                                },
                               ),
                               _MenuButton(
                                 icon: Icons.numbers,
