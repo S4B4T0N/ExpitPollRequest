@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 void main() => runApp(const MainApp());
@@ -9,15 +9,13 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // vypne ten napis debug
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        //  light rezim
         useMaterial3: true,
         colorSchemeSeed: const Color.fromARGB(255, 70, 197, 98),
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
-        // Dark rezim
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF2E7D32),
         brightness: Brightness.dark,
@@ -44,27 +42,26 @@ class HomeScreen extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.asset('assets/pozadie/pozadie.jpg', fit: BoxFit.cover),
-          Container(color: Colors.black.withOpacity(0.12)),
+          Container(color: const Color.fromRGBO(0, 0, 0, 0.12)),
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
               child: BackdropFilter(
-                // voliteľné – jemné rozmazanie za kartou
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 520),
                   child: Card(
-                    elevation: 2, // M3 povrch a tieň
+                    elevation: 2,
                     clipBehavior: Clip.antiAlias,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                       side: BorderSide(
-                        color: Colors.white.withOpacity(0.28),
+                        color: Colors.white.withValues(alpha: 0.28),
                         width: 1,
                       ),
                     ),
-                    color: cs.surface.withOpacity(0.32),
-                    surfaceTintColor: Colors.white, // M3 tint
+                    color: cs.surface.withValues(alpha: 0.32),
+                    surfaceTintColor: Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
