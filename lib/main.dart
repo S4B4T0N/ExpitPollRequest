@@ -1,7 +1,7 @@
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
-import 'package:exit_poll_request/screens/pridaj_osobu.dart';
 import 'package:exit_poll_request/widgets/glass_card.dart';
+import 'package:exit_poll_request/screens/pridaj_osobu.dart';
+import 'package:exit_poll_request/screens/grafy.dart';
 
 void main() => runApp(const MainApp());
 
@@ -28,8 +28,14 @@ class MainApp extends StatelessWidget {
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final List<Map<String, dynamic>> _people = [];
 
   @override
   Widget build(BuildContext context) {
@@ -47,102 +53,84 @@ class HomeScreen extends StatelessWidget {
           Container(color: const Color.fromRGBO(0, 0, 0, 0.12)),
           Center(
             child: GlassCard(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Osoba',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Hlavné menu',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _MenuButton(
+                        icon: Icons.bug_report,
+                        label: 'Debug',
+                        color: cs.primaryContainer,
+                        onTap: () {
+                          debugPrint('[DEBUG] Klik na debug tlacidlo');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('DEBUG klik')),
+                          );
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _menoCtrl,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(labelText: 'Meno'),
-                      validator: (v) {
-                        final t = v?.trim() ?? '';
-                        if (t.isEmpty) return 'Zadaj meno';
-                        if (t.length < 2) return 'Min. 2 znaky';
-                        if (t.length > 60) return 'Max. 60 znakov';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _priezCtrl,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Priezvisko',
-                      ),
-                      validator: (v) {
-                        final t = v?.trim() ?? '';
-                        if (t.isEmpty) return 'Zadaj priezvisko';
-                        if (t.length < 2) return 'Min. 2 znaky';
-                        if (t.length > 60) return 'Max. 60 znakov';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _vekCtrl,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(labelText: 'Vek'),
-                      validator: (v) {
-                        final t = v?.trim() ?? '';
-                        final n = int.tryParse(t);
-                        if (n == null) return 'Zadaj celé číslo';
-                        if (n < 18 || n > 120) return 'Vek 18–120';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    DropdownButtonFormField<String>(
-                      initialValue: _zvolenaStrana,
-                      items: _strany
-                          .map(
-                            (s) => DropdownMenuItem<String>(
-                              value: s,
-                              child: Text(s),
+                      _MenuButton(
+                        icon: Icons.person,
+                        label: 'Pridat osobu',
+                        color: cs.primary,
+                        onTap: () async {
+                          final result = await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PridajOsobu(),
                             ),
-                          )
-                          .toList(),
-                      decoration: const InputDecoration(
-                        labelText: 'Strana, ktorú volil(a)',
+                          );
+                          if (result != null && mounted) {
+                            setState(
+                              () => _people.add(
+                                Map<String, dynamic>.from(result),
+                              ),
+                            );
+                          }
+                        },
                       ),
-                      onChanged: (v) => setState(() => _zvolenaStrana = v),
+                      _MenuButton(
+                        icon: Icons.numbers,
+                        label: 'Grafy',
+                        color: cs.secondary,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const GrafyScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _MenuButton(
+                        icon: Icons.settings,
+                        label: 'Nastavenia',
+                        color: cs.tertiary,
+                        onTap: () {},
+                      ),
+                      _MenuButton(
+                        icon: Icons.help_outline,
+                        label: 'Nápoveda',
+                        color: cs.error,
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Počet osôb: ${_people.length}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: _onSave,
-                            child: const Text('Uložiť'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Zrušiť'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -158,6 +146,7 @@ class _MenuButton extends StatelessWidget {
     required this.label,
     required this.color,
     required this.onTap,
+    super.key,
   });
 
   final IconData icon;
