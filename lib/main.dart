@@ -4,11 +4,19 @@ import 'package:exit_poll_request/screens/pridaj_osobu.dart';
 import 'package:exit_poll_request/screens/grafy.dart';
 import 'package:exit_poll_request/screens/nastavenia.dart';
 import 'package:exit_poll_request/data/people_store.dart';
+import 'package:exit_poll_request/data/app_db.dart';
+import 'dart:math';
 
-// APP-ONLY prepínač témy
 final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
 
-void main() => runApp(const MainApp());
+// jediná globálna inštancia DB po otvorení v main()
+late final AppDb appDb;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  appDb = await AppDb.open(); // nastaví journaling_mode=WAL + foreign_keys
+  runApp(const MainApp());
+}
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
@@ -23,14 +31,13 @@ class MainApp extends StatelessWidget {
           theme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: const Color.fromARGB(255, 70, 197, 98),
-            brightness: Brightness.light,
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: const Color(0xFF2E7D32),
             brightness: Brightness.dark,
           ),
-          themeMode: mode, // riadi sa len v rámci appky
+          themeMode: mode,
           home: const HomeScreen(),
         );
       },
@@ -45,6 +52,22 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFromDb();
+  }
+
+  Future<void> _loadFromDb() async {
+    final all = await appDb.getAllPersons();
+    PeopleStore.i.people
+      ..clear()
+      ..addAll(all);
+    if (mounted) setState(() => _loaded = true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -69,73 +92,77 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 16),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _MenuButton(
-                        icon: Icons.person,
-                        label: 'Pridat osobu',
-                        color: cs.primary,
-                        onTap: () async {
-                          final result = await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const PridajOsobu(),
-                            ),
-                          );
-                          if (!mounted || result == null) return;
-                          PeopleStore.i.people.add(
-                            Person(
-                              name: result['name'] as String,
-                              surname: result['surname'] as String,
-                              age: result['age'] as int,
+                  if (!_loaded)
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(),
+                    ),
+                  if (_loaded)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _MenuButton(
+                          icon: Icons.person,
+                          label: 'Pridat osobu',
+                          color: cs.primary,
+                          onTap: () async {
+                            final r = await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PridajOsobu(),
+                              ),
+                            );
+                            if (!mounted || r == null) return;
+
+                            final uuid = _uuidV4();
+                            final p = Person(
+                              uuid: uuid,
+                              name: r['name'] as String,
+                              surname: r['surname'] as String,
+                              age: r['age'] as int,
                               party:
-                                  ((result['party'] as String?)
-                                          ?.trim()
-                                          .isEmpty ??
+                                  ((r['party'] as String?)?.trim().isEmpty ??
                                       true)
                                   ? 'Nezadané'
-                                  : (result['party'] as String),
-                              kraj: result['kraj'] as String,
-                              okres: result['okres'] as String,
-                            ),
-                          );
-                          setState(() {});
-                        },
-                      ),
-                      _MenuButton(
-                        icon: Icons.numbers,
-                        label: 'Grafy',
-                        color: cs.secondary,
-                        onTap: () {
-                          Navigator.of(context).push(
+                                  : (r['party'] as String),
+                              kraj: r['kraj'] as String,
+                              okres: r['okres'] as String,
+                            );
+
+                            await appDb.insertPerson(p);
+                            PeopleStore.i.people.add(p);
+                            setState(() {});
+                          },
+                        ),
+                        _MenuButton(
+                          icon: Icons.numbers,
+                          label: 'Grafy',
+                          color: cs.secondary,
+                          onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const GrafyScreen(),
                             ),
-                          );
-                        },
-                      ),
-                      _MenuButton(
-                        icon: Icons.settings,
-                        label: 'Nastavenia',
-                        color: cs.tertiary,
-                        onTap: () {
-                          Navigator.of(context).push(
+                          ),
+                        ),
+                        _MenuButton(
+                          icon: Icons.settings,
+                          label: 'Nastavenia',
+                          color: cs.tertiary,
+                          onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const NastaveniaScreen(),
                             ),
-                          );
-                        },
-                      ),
-                      _MenuButton(
-                        icon: Icons.help_outline,
-                        label: 'Nápoveda',
-                        color: cs.error,
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
+                          ),
+                        ),
+                        _MenuButton(
+                          icon: Icons.help_outline,
+                          label: 'Nápoveda',
+                          color: cs.error,
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
                   Text('Počet osôb: ${PeopleStore.i.people.length}'),
                 ],
@@ -146,6 +173,19 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+/// jednoduchý UUID v4 bez balíka, stačí na lokálnu DB
+String _uuidV4() {
+  final r = Random.secure();
+  String hex(int n) =>
+      List.generate(n, (_) => r.nextInt(16).toRadixString(16)).join();
+  final a = hex(8),
+      b = hex(4),
+      c = (r.nextInt(0x1000) | 0x4000).toRadixString(16),
+      d = ((r.nextInt(0x4000) | 0x8000)).toRadixString(16),
+      e = hex(12);
+  return '$a-$b-$c-$d-$e';
 }
 
 class _MenuButton extends StatelessWidget {

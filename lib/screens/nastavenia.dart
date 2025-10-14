@@ -31,37 +31,32 @@ class _NastaveniaScreenState extends State<NastaveniaScreen> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
-
-                  // Výber režimu len pre aplikáciu
-                  RadioListTile<ThemeMode>(
-                    title: const Text('Systém'),
-                    value: ThemeMode.system,
-                    groupValue: _local,
-                    onChanged: (v) => setState(() => _local = v!),
+                  // Nahrádza deprecated RadioListTile groupValue/onChanged
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text('Systém'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text('Svetlý'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text('Tmavý'),
+                      ),
+                    ],
+                    selected: {_local},
+                    onSelectionChanged: (s) => setState(() => _local = s.first),
                   ),
-                  RadioListTile<ThemeMode>(
-                    title: const Text('Svetlý'),
-                    value: ThemeMode.light,
-                    groupValue: _local,
-                    onChanged: (v) => setState(() => _local = v!),
-                  ),
-                  RadioListTile<ThemeMode>(
-                    title: const Text('Tmavý'),
-                    value: ThemeMode.dark,
-                    groupValue: _local,
-                    onChanged: (v) => setState(() => _local = v!),
-                  ),
-
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  const SizedBox(height: 8),
-
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                         child: FilledButton(
                           onPressed: () {
-                            themeMode.value = _local; // zmení tému len v appke
+                            themeMode.value = _local;
                             Navigator.pop(context);
                           },
                           child: const Text('Uložiť'),

@@ -1,4 +1,5 @@
 class Person {
+  final String uuid;
   final String name;
   final String surname;
   final int age;
@@ -7,6 +8,7 @@ class Person {
   final String okres;
 
   Person({
+    required this.uuid,
     required this.name,
     required this.surname,
     required this.age,
@@ -19,6 +21,6 @@ class Person {
 class PeopleStore {
   PeopleStore._();
   static final i = PeopleStore._();
-
   final List<Person> people = [];
 }
+
