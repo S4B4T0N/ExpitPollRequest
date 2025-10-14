@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:exit_poll_request/widgets/glass_card.dart';
 import 'package:exit_poll_request/screens/pridaj_osobu.dart';
 import 'package:exit_poll_request/screens/grafy.dart';
+import 'package:exit_poll_request/screens/nastavenia.dart';
 import 'package:exit_poll_request/data/people_store.dart';
+
+// APP-ONLY prepínač témy
+final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
 
 void main() => runApp(const MainApp());
 
@@ -11,19 +15,25 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color.fromARGB(255, 70, 197, 98),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF2E7D32),
-        brightness: Brightness.dark,
-      ),
-      themeMode: ThemeMode.system,
-      home: const HomeScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeMode,
+      builder: (_, mode, __) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: const Color.fromARGB(255, 70, 197, 98),
+            brightness: Brightness.light,
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: const Color(0xFF2E7D32),
+            brightness: Brightness.dark,
+          ),
+          themeMode: mode, // riadi sa len v rámci appky
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }
@@ -69,24 +79,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: 'Pridat osobu',
                         color: cs.primary,
                         onTap: () async {
-                          final r = await Navigator.of(context).push(
+                          final result = await Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const PridajOsobu(),
                             ),
                           );
-                          if (!mounted || r == null) return;
+                          if (!mounted || result == null) return;
                           PeopleStore.i.people.add(
                             Person(
-                              name: r['name'] as String,
-                              surname: r['surname'] as String,
-                              age: r['age'] as int,
+                              name: result['name'] as String,
+                              surname: result['surname'] as String,
+                              age: result['age'] as int,
                               party:
-                                  ((r['party'] as String?)?.trim().isEmpty ??
+                                  ((result['party'] as String?)
+                                          ?.trim()
+                                          .isEmpty ??
                                       true)
                                   ? 'Nezadané'
-                                  : (r['party'] as String),
-                              kraj: r['kraj'] as String,
-                              okres: r['okres'] as String,
+                                  : (result['party'] as String),
+                              kraj: result['kraj'] as String,
+                              okres: result['okres'] as String,
                             ),
                           );
                           setState(() {});
@@ -96,17 +108,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: Icons.numbers,
                         label: 'Grafy',
                         color: cs.secondary,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const GrafyScreen(),
-                          ),
-                        ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const GrafyScreen(),
+                            ),
+                          );
+                        },
                       ),
                       _MenuButton(
                         icon: Icons.settings,
                         label: 'Nastavenia',
                         color: cs.tertiary,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NastaveniaScreen(),
+                            ),
+                          );
+                        },
                       ),
                       _MenuButton(
                         icon: Icons.help_outline,
@@ -136,6 +156,7 @@ class _MenuButton extends StatelessWidget {
     required this.onTap,
     super.key,
   });
+
   final IconData icon;
   final String label;
   final Color color;
