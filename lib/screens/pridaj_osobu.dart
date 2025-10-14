@@ -1,6 +1,6 @@
-//import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:exit_poll_request/widgets/glass_card.dart';
+import 'package:exit_poll_request/data/regions_sk.dart';
 
 class PridajOsobu extends StatefulWidget {
   const PridajOsobu({super.key});
@@ -22,6 +22,9 @@ class _PridajOsobuState extends State<PridajOsobu> {
     'Strana C',
   ];
   String? _zvolenaStrana = 'Nezadané';
+
+  String? _kraj;
+  String? _okres;
 
   @override
   void dispose() {
@@ -103,13 +106,43 @@ class _PridajOsobuState extends State<PridajOsobu> {
                     const SizedBox(height: 12),
 
                     DropdownButtonFormField<String>(
+                      value: _kraj,
+                      items: kraje
+                          .map(
+                            (k) => DropdownMenuItem(value: k, child: Text(k)),
+                          )
+                          .toList(),
+                      decoration: const InputDecoration(labelText: 'Kraj'),
+                      onChanged: (v) => setState(() {
+                        _kraj = v;
+                        _okres = null;
+                      }),
+                      validator: (v) => v == null ? 'Vyber kraj' : null,
+                    ),
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      value: _okres,
+                      items:
+                          (_kraj == null
+                                  ? const <String>[]
+                                  : (okresy[_kraj] ?? const <String>[]))
+                              .map(
+                                (o) =>
+                                    DropdownMenuItem(value: o, child: Text(o)),
+                              )
+                              .toList(),
+                      decoration: const InputDecoration(labelText: 'Okres'),
+                      onChanged: (v) => setState(() => _okres = v),
+                      validator: (v) => v == null ? 'Vyber okres' : null,
+                    ),
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
                       initialValue: _zvolenaStrana,
                       items: _strany
                           .map(
-                            (s) => DropdownMenuItem<String>(
-                              value: s,
-                              child: Text(s),
-                            ),
+                            (s) => DropdownMenuItem(value: s, child: Text(s)),
                           )
                           .toList(),
                       decoration: const InputDecoration(
@@ -153,6 +186,8 @@ class _PridajOsobuState extends State<PridajOsobu> {
       'surname': _priezCtrl.text.trim(),
       'age': int.parse(_vekCtrl.text.trim()),
       'party': _zvolenaStrana,
+      'kraj': _kraj,
+      'okres': _okres,
     };
     Navigator.pop(context, data);
   }

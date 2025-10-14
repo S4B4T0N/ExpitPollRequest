@@ -16,7 +16,6 @@ class MainApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color.fromARGB(255, 70, 197, 98),
-        brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -70,41 +69,38 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: 'Pridat osobu',
                         color: cs.primary,
                         onTap: () async {
-                          final result = await Navigator.of(context).push(
+                          final r = await Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const PridajOsobu(),
                             ),
                           );
-                          if (!mounted || result == null) return;
-                          // uloženie do shared in-memory store
+                          if (!mounted || r == null) return;
                           PeopleStore.i.people.add(
                             Person(
-                              name: result['name'] as String,
-                              surname: result['surname'] as String,
+                              name: r['name'] as String,
+                              surname: r['surname'] as String,
+                              age: r['age'] as int,
                               party:
-                                  (result['party'] as String?)
-                                          ?.trim()
-                                          .isEmpty ??
-                                      true
+                                  ((r['party'] as String?)?.trim().isEmpty ??
+                                      true)
                                   ? 'Nezadané'
-                                  : (result['party'] as String),
-                              age: result['age'] as int,
+                                  : (r['party'] as String),
+                              kraj: r['kraj'] as String,
+                              okres: r['okres'] as String,
                             ),
                           );
-                          setState(() {}); // ak chceš zobraziť počítadlo atď.
+                          setState(() {});
                         },
                       ),
                       _MenuButton(
                         icon: Icons.numbers,
                         label: 'Grafy',
                         color: cs.secondary,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const GrafyScreen(),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const GrafyScreen(),
+                          ),
+                        ),
                       ),
                       _MenuButton(
                         icon: Icons.settings,
@@ -117,17 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: 'Nápoveda',
                         color: cs.error,
                         onTap: () {},
-                      ),
-                      _MenuButton(
-                        icon: Icons.bug_report,
-                        label: 'Debug',
-                        color: cs.primaryContainer,
-                        onTap: () {
-                          debugPrint('[DEBUG] Klik na debug tlacidlo');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('DEBUG klik')),
-                          );
-                        },
                       ),
                     ],
                   ),
@@ -151,7 +136,6 @@ class _MenuButton extends StatelessWidget {
     required this.onTap,
     super.key,
   });
-
   final IconData icon;
   final String label;
   final Color color;
