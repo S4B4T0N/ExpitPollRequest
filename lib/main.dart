@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:exit_poll_request/widgets/glass_card.dart';
 import 'package:exit_poll_request/screens/pridaj_osobu.dart';
 import 'package:exit_poll_request/screens/grafy.dart';
+import 'package:exit_poll_request/data/people_store.dart';
 
 void main() => runApp(const MainApp());
 
@@ -35,8 +36,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Map<String, dynamic>> _people = [];
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -67,17 +66,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     runSpacing: 12,
                     children: [
                       _MenuButton(
-                        icon: Icons.bug_report,
-                        label: 'Debug',
-                        color: cs.primaryContainer,
-                        onTap: () {
-                          debugPrint('[DEBUG] Klik na debug tlacidlo');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('DEBUG klik')),
-                          );
-                        },
-                      ),
-                      _MenuButton(
                         icon: Icons.person,
                         label: 'Pridat osobu',
                         color: cs.primary,
@@ -87,13 +75,23 @@ class _HomeScreenState extends State<HomeScreen> {
                               builder: (_) => const PridajOsobu(),
                             ),
                           );
-                          if (result != null && mounted) {
-                            setState(
-                              () => _people.add(
-                                Map<String, dynamic>.from(result),
-                              ),
-                            );
-                          }
+                          if (!mounted || result == null) return;
+                          // uloženie do shared in-memory store
+                          PeopleStore.i.people.add(
+                            Person(
+                              name: result['name'] as String,
+                              surname: result['surname'] as String,
+                              party:
+                                  (result['party'] as String?)
+                                          ?.trim()
+                                          .isEmpty ??
+                                      true
+                                  ? 'Nezadané'
+                                  : (result['party'] as String),
+                              age: result['age'] as int,
+                            ),
+                          );
+                          setState(() {}); // ak chceš zobraziť počítadlo atď.
                         },
                       ),
                       _MenuButton(
@@ -120,16 +118,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: cs.error,
                         onTap: () {},
                       ),
+                      _MenuButton(
+                        icon: Icons.bug_report,
+                        label: 'Debug',
+                        color: cs.primaryContainer,
+                        onTap: () {
+                          debugPrint('[DEBUG] Klik na debug tlacidlo');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('DEBUG klik')),
+                          );
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      'Počet osôb: ${_people.length}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                  Text('Počet osôb: ${PeopleStore.i.people.length}'),
                 ],
               ),
             ),
