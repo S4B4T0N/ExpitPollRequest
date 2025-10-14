@@ -46,79 +46,102 @@ class HomeScreen extends StatelessWidget {
           Image.asset('assets/pozadie/pozadie.jpg', fit: BoxFit.cover),
           Container(color: const Color.fromRGBO(0, 0, 0, 0.12)),
           Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Card(
-                    elevation: 2,
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.28),
-                        width: 1,
+            child: GlassCard(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Osoba',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    color: cs.surface.withValues(alpha: 0.32),
-                    surfaceTintColor: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Hlavné menu',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
+                    const SizedBox(height: 12),
+
+                    TextFormField(
+                      controller: _menoCtrl,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(labelText: 'Meno'),
+                      validator: (v) {
+                        final t = v?.trim() ?? '';
+                        if (t.isEmpty) return 'Zadaj meno';
+                        if (t.length < 2) return 'Min. 2 znaky';
+                        if (t.length > 60) return 'Max. 60 znakov';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextFormField(
+                      controller: _priezCtrl,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Priezvisko',
+                      ),
+                      validator: (v) {
+                        final t = v?.trim() ?? '';
+                        if (t.isEmpty) return 'Zadaj priezvisko';
+                        if (t.length < 2) return 'Min. 2 znaky';
+                        if (t.length > 60) return 'Max. 60 znakov';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextFormField(
+                      controller: _vekCtrl,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(labelText: 'Vek'),
+                      validator: (v) {
+                        final t = v?.trim() ?? '';
+                        final n = int.tryParse(t);
+                        if (n == null) return 'Zadaj celé číslo';
+                        if (n < 18 || n > 120) return 'Vek 18–120';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      initialValue: _zvolenaStrana,
+                      items: _strany
+                          .map(
+                            (s) => DropdownMenuItem<String>(
+                              value: s,
+                              child: Text(s),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              _MenuButton(
-                                icon: Icons.person,
-                                label: 'Pridat osobu',
-                                color: cs.primary,
-                                onTap: () {
-                                  debugPrint('tap pridaj_osobu');
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const PridajOsobu(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _MenuButton(
-                                icon: Icons.numbers,
-                                label: 'Grafy',
-                                color: cs.secondary,
-                                onTap: () {},
-                              ),
-                              _MenuButton(
-                                icon: Icons.settings,
-                                label: 'Nastavenia',
-                                color: cs.tertiary,
-                                onTap: () {},
-                              ),
-                              _MenuButton(
-                                icon: Icons.help_outline,
-                                label: 'Nápoveda',
-                                color: cs.error,
-                                onTap: () {},
-                              ),
-                            ],
-                          ),
-                        ],
+                          )
+                          .toList(),
+                      decoration: const InputDecoration(
+                        labelText: 'Strana, ktorú volil(a)',
                       ),
+                      onChanged: (v) => setState(() => _zvolenaStrana = v),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: _onSave,
+                            child: const Text('Uložiť'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Zrušiť'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
