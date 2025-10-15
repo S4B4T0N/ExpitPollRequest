@@ -6,6 +6,7 @@ import 'package:exit_poll_request/screens/nastavenia.dart';
 import 'package:exit_poll_request/data/people_store.dart';
 import 'package:exit_poll_request/data/app_db.dart';
 import 'dart:math';
+import 'package:exit_poll_request/screens/napoveda.dart';
 
 final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
 
@@ -159,7 +160,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: Icons.help_outline,
                           label: 'Nápoveda',
                           color: cs.error,
-                          onTap: () {},
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NapovedaScreen(),
+                            ),
+                          ),
                         ),
                       ],
                     ),

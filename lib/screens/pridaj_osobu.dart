@@ -107,7 +107,7 @@ class _PridajOsobuState extends State<PridajOsobu> {
 
                     // DEPRECATED fix: initialValue namiesto value
                     DropdownButtonFormField<String>(
-                      initialValue: _kraj,
+                      value: _kraj,
                       items: kraje
                           .map(
                             (k) => DropdownMenuItem(value: k, child: Text(k)),
@@ -124,7 +124,7 @@ class _PridajOsobuState extends State<PridajOsobu> {
 
                     // DEPRECATED fix: initialValue namiesto value
                     DropdownButtonFormField<String>(
-                      initialValue: _okres,
+                      value: _okres,
                       items:
                           (_kraj == null
                                   ? const <String>[]
@@ -141,7 +141,7 @@ class _PridajOsobuState extends State<PridajOsobu> {
                     const SizedBox(height: 12),
 
                     DropdownButtonFormField<String>(
-                      initialValue: _zvolenaStrana,
+                      value: _zvolenaStrana,
                       items: _strany
                           .map(
                             (s) => DropdownMenuItem(value: s, child: Text(s)),
