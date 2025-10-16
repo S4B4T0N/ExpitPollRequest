@@ -1,12 +1,13 @@
+import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:exit_poll_request/widgets/glass_card.dart';
 import 'package:exit_poll_request/screens/pridaj_osobu.dart';
 import 'package:exit_poll_request/screens/grafy.dart';
 import 'package:exit_poll_request/screens/nastavenia.dart';
+import 'package:exit_poll_request/screens/napoveda.dart';
 import 'package:exit_poll_request/data/people_store.dart';
 import 'package:exit_poll_request/data/app_db.dart';
-import 'dart:math';
-import 'package:exit_poll_request/screens/napoveda.dart';
 
 final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
 
@@ -55,10 +56,38 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _loaded = false;
 
+  // Auto-sync každých 15 sekúnd
+  Timer? _autoSync;
+
   @override
   void initState() {
     super.initState();
     _loadFromDb();
+    _startAutoSync();
+  }
+
+  @override
+  void dispose() {
+    _autoSync?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoSync() {
+    _autoSync?.cancel();
+    _autoSync =
+        Timer.periodic(const Duration(seconds: 15), (_) => _syncToNas());
+  }
+
+  Future<void> _syncToNas() async {
+    try {
+      final n =
+          await appDb.syncToNas(); // upsert všetkých lokálnych osôb na NAS
+      if (n > 0) {
+        debugPrint('Synced $n riadkov na NAS');
+      }
+    } catch (e) {
+      debugPrint('Sync error: $e');
+    }
   }
 
   Future<void> _loadFromDb() async {
@@ -122,8 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               name: r['name'] as String,
                               surname: r['surname'] as String,
                               age: r['age'] as int,
-                              party:
-                                  ((r['party'] as String?)?.trim().isEmpty ??
+                              party: ((r['party'] as String?)?.trim().isEmpty ??
                                       true)
                                   ? 'Nezadané'
                                   : (r['party'] as String),
