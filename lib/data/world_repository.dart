@@ -1,34 +1,30 @@
-import 'package:exit_poll_request/data/people_store.dart' show Person;
-import 'package:exit_poll_request/data/pp_db.dart';
+// lib/data/world_repository.dart
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'people_store.dart'; // pre Person model (ak je inde, uprav import)
 
-/// Jednoduchý repo pre "World" zdroj = PostgreSQL (NAS).
 class WorldRepository {
   WorldRepository._();
-  static final WorldRepository i = WorldRepository._();
+  static final i = WorldRepository._();
 
-  final _remote = PpDbRemote();
-
-  /// Vráti osoby z Postgresu a premenuje stĺpce na lokálny model.
   Future<List<Person>> fetchPeople() async {
-    final res = await _remote.selectPersons();
+    final sb = Supabase.instance.client;
+    final res = await sb
+        .from('persons')
+        .select('uuid, meno, priezvisko, vek, strana, kraj, okres');
 
-    // postgres:^3.0.0 -> Result iteruje Row; Row.toColumnMap() dá mapu "názovStĺpca" -> hodnota
-    final people = <Person>[];
-    for (final row in res) {
-      final m = row.toColumnMap();
-
-      people.add(
-        Person(
-          uuid: (m['uuid'] ?? '') as String,
-          name: (m['meno'] ?? '') as String,
-          surname: (m['priezvisko'] ?? '') as String,
-          age: (m['vek'] ?? 0) as int,
-          party: (m['strana'] ?? 'Nezadané') as String,
-          kraj: (m['kraj'] ?? '') as String,
-          okres: (m['okres'] ?? '') as String,
-        ),
-      );
-    }
-    return people;
+    // res je List<dynamic> (mapy)
+    return (res as List)
+        .map((e) => Person(
+              uuid: e['uuid'] as String,
+              name: e['meno'] as String,
+              surname: e['priezvisko'] as String,
+              age: e['vek'] as int,
+              party: (e['strana'] as String?)?.trim().isEmpty ?? true
+                  ? 'Nezadané'
+                  : e['strana'] as String,
+              kraj: e['kraj'] as String,
+              okres: e['okres'] as String,
+            ))
+        .toList();
   }
 }

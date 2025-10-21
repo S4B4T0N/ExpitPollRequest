@@ -1,6 +1,10 @@
-import 'dart:math';
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+
+import 'package:supabase_flutter/supabase_flutter.dart'; // Supabase init
+import 'package:exit_poll_request/data/supabase_sync.dart'; // sync → Supabase
+
 import 'package:exit_poll_request/widgets/glass_card.dart';
 import 'package:exit_poll_request/screens/pridaj_osobu.dart';
 import 'package:exit_poll_request/screens/grafy.dart';
@@ -10,13 +14,19 @@ import 'package:exit_poll_request/data/people_store.dart';
 import 'package:exit_poll_request/data/app_db.dart';
 
 final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
-
-// jediná globálna inštancia DB po otvorení v main()
 late final AppDb appDb;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  appDb = await AppDb.open(); // nastaví journaling_mode=WAL + foreign_keys
+
+  // Supabase – doplň svoje hodnoty
+  await Supabase.initialize(
+    url: 'https://crxmeutmisfuaatrlalb.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyeG1ldXRtaXNmdWFhdHJsYWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NTYxNDUsImV4cCI6MjA3NjUzMjE0NX0._hM0-5D3-fKSqWv1Rb5STnRY40diP8kZdpsRldy-Ih0',
+  );
+
+  appDb = await AppDb.open(); // WAL + foreign_keys
   runApp(const MainApp());
 }
 
@@ -73,18 +83,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void _startAutoSync() {
     _autoSync?.cancel();
     _autoSync =
-        Timer.periodic(const Duration(seconds: 15), (_) => _syncToNas());
+        Timer.periodic(const Duration(seconds: 15), (_) => _syncToSupabase());
   }
 
-  Future<void> _syncToNas() async {
+  Future<void> _syncToSupabase() async {
     try {
-      final n =
-          await appDb.syncToNas(); // upsert všetkých lokálnych osôb na NAS
-      if (n > 0) {
-        debugPrint('Synced $n riadkov na NAS');
-      }
+      final n = await SupaSync.upsertAll(PeopleStore.i.people);
+      if (n > 0) debugPrint('Supabase sync: upsert $n riadkov');
     } catch (e) {
-      debugPrint('Sync error: $e');
+      debugPrint('Supabase sync error: $e');
     }
   }
 
@@ -138,8 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () async {
                             final r = await Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => const PridajOsobu(),
-                              ),
+                                  builder: (_) => const PridajOsobu()),
                             );
                             if (!mounted || r == null) return;
 
@@ -160,6 +166,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             await appDb.insertPerson(p);
                             PeopleStore.i.people.add(p);
                             setState(() {});
+
+                            // okamžitý zápis do Supabase
+                            try {
+                              await SupaSync.upsertOne(p);
+                            } catch (e) {
+                              debugPrint('Supabase upsertOne error: $e');
+                            }
                           },
                         ),
                         _MenuButton(
@@ -168,8 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: cs.secondary,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const GrafyScreen(),
-                            ),
+                                builder: (_) => const GrafyScreen()),
                           ),
                         ),
                         _MenuButton(
@@ -178,8 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: cs.tertiary,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const NastaveniaScreen(),
-                            ),
+                                builder: (_) => const NastaveniaScreen()),
                           ),
                         ),
                         _MenuButton(
@@ -188,8 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: cs.error,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const NapovedaScreen(),
-                            ),
+                                builder: (_) => const NapovedaScreen()),
                           ),
                         ),
                       ],
@@ -202,19 +212,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
-      // --- Footer mimo pozadia, pri spodnom okraji ---
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             border: Border(
-              top: BorderSide(
-                color: Theme.of(context).dividerColor,
-                width: 0.5,
-              ),
-            ),
+                top: BorderSide(
+                    color: Theme.of(context).dividerColor, width: 0.5)),
           ),
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
           child: const Text(
@@ -228,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// jednoduchý UUID v4 bez balíka, stačí na lokálnu DB
+/// jednoduchý UUID v4 bez balíka
 String _uuidV4() {
   final r = Random.secure();
   String hex(int n) =>
@@ -268,9 +273,8 @@ class _MenuButton extends StatelessWidget {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );
