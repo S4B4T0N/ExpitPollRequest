@@ -23,27 +23,23 @@ class NapovedaScreen extends StatelessWidget {
                   children: const [
                     _HelpSection(
                       title: 'Ako pridať osobu',
-                      body:
-                          'Na úvodnej obrazovke zvoľ „Pridať osobu“. Vyplň '
+                      body: 'Na úvodnej obrazovke zvoľ „Pridať osobu“. Vyplň '
                           'meno, priezvisko, vek, kraj a okres. Strana je '
                           'voliteľná. Ulož tlačidlom „Uložiť“.',
                     ),
                     _HelpSection(
                       title: 'Grafy',
-                      body:
-                          'Grafy zobrazujú rozdelenie podľa zvolenej strany. '
+                      body: 'Grafy zobrazujú rozdelenie podľa zvolenej strany. '
                           'Percentá sa rátajú z aktuálne uložených záznamov.',
                     ),
                     _HelpSection(
                       title: 'Úložisko dát',
-                      body:
-                          'Údaje sú uložené lokálne v SQLite na tomto '
+                      body: 'Údaje sú uložené lokálne v SQLite na tomto '
                           'zariadení. Neodosielajú sa na internet.',
                     ),
                     _HelpSection(
                       title: 'Mazanie dát',
-                      body:
-                          'Vymazanie záznamov bude dostupné v Nastaveniach '
+                      body: 'Vymazanie záznamov bude dostupné v Nastaveniach '
                           'alebo odstránením lokálnej DB (pokročilé).',
                     ),
                   ],

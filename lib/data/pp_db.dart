@@ -8,7 +8,7 @@ class PpDbRemote {
   static const _user = 'exitpoll';
   static const _pass = 'exitpoll123';
   static const _useTLS = false; // LAN, bez TLS
-  static const _timeoutSec = 10; // daj radšej 10
+  static const _timeoutSec = 10;
 
   Connection? _conn;
 
@@ -25,10 +25,9 @@ class PpDbRemote {
 
     final settings = ConnectionSettings(
       connectTimeout: const Duration(seconds: _timeoutSec),
-      // Ak tvoja verzia používa tlsMode namiesto sslMode, prehoď riadok:
-      // tlsMode: _useTLS ? TlsMode.require : TlsMode.disable,
       // ignore: deprecated_member_use
       sslMode: _useTLS ? SslMode.require : SslMode.disable,
+      // Ak používaš novšie API:  tlsMode: _useTLS ? TlsMode.require : TlsMode.disable,
     );
 
     _conn = await Connection.open(endpoint, settings: settings);
@@ -77,5 +76,15 @@ class PpDbRemote {
         'okres': okres,
       },
     );
+  }
+
+  /// SELECT pre všetky osoby z Postgresu.
+  Future<Result> selectPersons() async {
+    await open();
+    final c = _conn!;
+    return c.execute(Sql.named('''
+      SELECT uuid, meno, priezvisko, vek, strana, kraj, okres
+      FROM public.persons
+    '''));
   }
 }
