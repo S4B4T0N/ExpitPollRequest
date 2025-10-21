@@ -55,8 +55,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _loaded = false;
-
-  // Auto-sync každých 15 sekúnd
   Timer? _autoSync;
 
   @override
@@ -203,6 +201,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+
+      // --- Footer mimo pozadia, pri spodnom okraji ---
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(context).dividerColor,
+                width: 0.5,
+              ),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          child: const Text(
+            'Autor: Tomáš Z.  •  Študentský projekt pre predmet Mobilné technológie',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12),
+          ),
+        ),
       ),
     );
   }
