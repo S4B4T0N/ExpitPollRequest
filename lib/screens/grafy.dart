@@ -23,7 +23,7 @@ class _GrafyScreenState extends State<GrafyScreen> {
   @override
   void initState() {
     super.initState();
-    _worldFuture = WorldRepository.i.fetchPeople();
+    _worldFuture = WorldRepository.i.fetchPeople(); // prednačítanie
   }
 
   @override
@@ -35,13 +35,11 @@ class _GrafyScreenState extends State<GrafyScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // pozadie z main.dart
           Image.asset('assets/pozadie/pozadie.jpg', fit: BoxFit.cover),
-          Container(color: const Color.fromRGBO(0, 0, 0, 0.12)),
-
-          // HLAVNÝ OBSAH: prepínač + grafy pod ním
+          Container(color: const Color.fromRGBO(0, 0, 0, 0.10)),
           Column(
             children: [
+              // prepínač World | Local
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: ScopeToggle(
@@ -57,54 +55,81 @@ class _GrafyScreenState extends State<GrafyScreen> {
                   },
                 ),
               ),
+
+              // nadpis + počet respondentov
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    isWorld ? 'World data' : 'Lokálne data',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: _HeaderLine(scope: _scope, worldFuture: _worldFuture),
               ),
-              const SizedBox(height: 8),
-              Expanded(child: _buildContent(isWorld)),
+
+              // obsah
+              Expanded(
+                child: isWorld
+                    ? FutureBuilder<List<Person>>(
+                        future: _worldFuture,
+                        builder: (context, snap) {
+                          if (snap.connectionState == ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+                          if (snap.hasError) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  'Nepodarilo sa načítať dáta z DB: ${snap.error}',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            );
+                          }
+                          final people = snap.data ?? const <Person>[];
+                          return _ChartsCard(people: people);
+                        },
+                      )
+                    : _ChartsCard(people: PeopleStore.i.people),
+              ),
             ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildContent(bool isWorld) {
+/// riadok: "Local data" / "Global data" + počet respondentov
+class _HeaderLine extends StatelessWidget {
+  const _HeaderLine({required this.scope, required this.worldFuture});
+
+  final DataScope scope;
+  final Future<List<Person>>? worldFuture;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWorld = scope == DataScope.world;
+
     if (!isWorld) {
-      final people = PeopleStore.i.people;
-      return _ChartsCard(people: people);
+      final n = PeopleStore.i.people.length;
+      return _line('Local data', n);
     }
 
     return FutureBuilder<List<Person>>(
-      future: _worldFuture,
+      future: worldFuture,
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snap.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Nepodarilo sa načítať dáta z DB: ${snap.error}',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
-        final people = snap.data ?? const <Person>[];
-        return _ChartsCard(people: people);
+        final n = (snap.hasData ? (snap.data?.length ?? 0) : 0);
+        return _line('Global data', n);
       },
+    );
+  }
+
+  Widget _line(String title, int count) {
+    return Row(
+      children: [
+        Text(title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        const Spacer(),
+        Text('Respondenti: $count'),
+      ],
     );
   }
 }
@@ -115,40 +140,57 @@ class _ChartsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1) Strany
+    // 1) Strana
     final Map<String, int> partyCounts = {};
     for (final p in people) {
       final key = (p.party.isEmpty) ? 'Nezadané' : p.party;
       partyCounts.update(key, (v) => v + 1, ifAbsent: () => 1);
     }
+
     // 2) Kraj
     final Map<String, int> krajCounts = {};
     for (final p in people) {
       final key = (p.kraj.isEmpty) ? 'Nezadané' : p.kraj;
       krajCounts.update(key, (v) => v + 1, ifAbsent: () => 1);
     }
-    // 3) Vekové skupiny
+
+    // 3) Vek
     final Map<String, int> vekCounts = _ageBuckets(people);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      children: [
-        GlassCard(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _section('Rozdelenie podľa strany', partyCounts),
-                const SizedBox(height: 24),
-                _section('Rozdelenie podľa kraja', krajCounts),
-                const SizedBox(height: 24),
-                _section('Rozdelenie podľa veku', vekCounts),
-              ],
+    return LayoutBuilder(
+      builder: (context, cs) {
+        const hGap = 12.0;
+        final tileW = (cs.maxWidth - hGap) / 2; // 2 stĺpce
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          children: [
+            GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+                child: Wrap(
+                  spacing: hGap,
+                  runSpacing: hGap,
+                  children: [
+                    _chartTile(
+                        width: tileW,
+                        title: 'Rozdelenie podľa strany',
+                        data: partyCounts),
+                    _chartTile(
+                        width: tileW,
+                        title: 'Rozdelenie podľa kraja',
+                        data: krajCounts),
+                    _chartTile(
+                        width: tileW,
+                        title: 'Rozdelenie podľa veku',
+                        data: vekCounts),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -163,62 +205,63 @@ class _ChartsCard extends StatelessWidget {
     };
     for (final p in people) {
       final a = p.age;
-      if (a >= 18 && a <= 24) {
+      if (a >= 18 && a <= 24)
         m['18–24'] = (m['18–24'] ?? 0) + 1;
-      } else if (a <= 34) {
+      else if (a <= 34)
         m['25–34'] = (m['25–34'] ?? 0) + 1;
-      } else if (a <= 44) {
+      else if (a <= 44)
         m['35–44'] = (m['35–44'] ?? 0) + 1;
-      } else if (a <= 54) {
+      else if (a <= 54)
         m['45–54'] = (m['45–54'] ?? 0) + 1;
-      } else if (a <= 64) {
+      else if (a <= 64)
         m['55–64'] = (m['55–64'] ?? 0) + 1;
-      } else {
+      else
         m['65+'] = (m['65+'] ?? 0) + 1;
-      }
     }
     return m;
   }
 
-  Widget _section(String title, Map<String, int> data) {
-    if (data.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text('Žiadne dáta'),
-        ],
-      );
-    }
-
+  Widget _chartTile({
+    required double width,
+    required String title,
+    required Map<String, int> data,
+  }) {
     final total = data.values.fold<int>(0, (a, b) => a + b);
     final Map<String, double> chartData = {
       for (final e in data.entries) e.key: e.value.toDouble()
     };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        PieChart(
-          dataMap: chartData,
-          animationDuration: const Duration(milliseconds: 400),
-          chartRadius: 180,
-          legendOptions: const LegendOptions(
-            showLegends: true,
-            legendPosition: LegendPosition.bottom,
-          ),
-          chartValuesOptions: const ChartValuesOptions(
-            showChartValues: true,
-            showChartValuesInPercentage: true,
-            decimalPlaces: 1,
-          ),
-          baseChartColor: Colors.grey.shade200,
-          totalValue: total.toDouble(),
-        ),
-      ],
+    // menší priemer, aby sa zmestili 2 vedľa seba
+    final radius = (width * 0.75).clamp(120.0, 160.0);
+
+    return SizedBox(
+      width: width,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (chartData.isEmpty)
+            const Text('Žiadne dáta')
+          else
+            PieChart(
+              dataMap: chartData,
+              animationDuration: const Duration(milliseconds: 400),
+              chartRadius: radius,
+              legendOptions: const LegendOptions(
+                showLegends: true,
+                legendPosition: LegendPosition.bottom,
+              ),
+              chartValuesOptions: const ChartValuesOptions(
+                showChartValues: true,
+                showChartValuesInPercentage: true,
+                decimalPlaces: 1,
+              ),
+              baseChartColor: Colors.grey.shade200,
+              totalValue: total.toDouble(),
+            ),
+        ],
+      ),
     );
   }
 }
