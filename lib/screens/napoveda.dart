@@ -54,7 +54,7 @@ class NapovedaScreen extends StatelessWidget {
 }
 
 class _HelpSection extends StatelessWidget {
-  const _HelpSection({required this.title, required this.body, super.key});
+  const _HelpSection({required this.title, required this.body});
   final String title;
   final String body;
 

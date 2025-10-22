@@ -1,93 +1,12 @@
+// lib/data/app_db.dart
+// Čisté SQLite. NAS/Postgres odstránený.
+
 import 'dart:async';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
-import 'package:postgres/postgres.dart';
 
-import 'people_store.dart';
+import 'people_store.dart'; // pre typ Person
 
-/// Konfigurácia NAS Postgresu.
-class NasConfig {
-  static const host = '192.168.1.107';
-  static const port = 5432;
-  static const dbName = 'exitpoll';
-  static const user = 'exitpoll';
-  static const password = 'exitpoll123';
-
-  /// TLS podľa potreby. Ak máš čisto LAN bez TLS, nechaj false.
-  static const useTLS = false;
-
-  /// Timeout pripojenia.
-  static const timeoutSeconds = 6;
-}
-
-/// Klient pre Postgres 3.x (otvorený iba počas syncu).
-class PpDbRemote {
-  Connection? _conn;
-
-  Future<void> open() async {
-    if (_conn != null) return;
-    final endpoint = Endpoint(
-      host: NasConfig.host,
-      port: NasConfig.port,
-      database: NasConfig.dbName,
-      username: NasConfig.user,
-      password: NasConfig.password,
-    );
-
-    // Pozn.: názov poľa môže byť `sslMode` alebo `tlsMode` podľa verzie 3.x.
-    // Ak IDE hlási chybu, zmeň na druhý názov.
-    final settings = ConnectionSettings(
-      connectTimeout: Duration(seconds: NasConfig.timeoutSeconds),
-      // sslMode/tlsMode vypni pre čistú LAN
-      // ignore: deprecated_member_use
-      sslMode: NasConfig.useTLS ? SslMode.require : SslMode.disable,
-    );
-
-    _conn = await Connection.open(endpoint, settings: settings);
-  }
-
-  Future<void> close() async {
-    final c = _conn;
-    _conn = null;
-    if (c != null) {
-      await c.close();
-    }
-  }
-
-  Future<void> upsertPerson(Person p) async {
-    final c = _conn;
-    if (c == null) {
-      throw StateError('Remote connection is not open');
-    }
-
-    await c.execute(
-      Sql.named('''
-        INSERT INTO public.persons
-          (uuid, meno, priezvisko, vek, strana, kraj, okres)
-        VALUES
-          (@uuid, @meno, @priezvisko, @vek, @strana, @kraj, @okres)
-        ON CONFLICT (uuid) DO UPDATE SET
-          meno=@meno,
-          priezvisko=@priezvisko,
-          vek=@vek,
-          strana=@strana,
-          kraj=@kraj,
-          okres=@okres;
-      '''),
-      parameters: {
-        'uuid': p.uuid,
-        'meno': p.name,
-        'priezvisko': p.surname,
-        'vek': p.age,
-        'strana': p.party,
-        'kraj': p.kraj,
-        'okres': p.okres,
-      },
-    );
-  }
-}
-
-/// SQLite wrapper (singleton) + sync na NAS Postgres.
 class AppDb {
   AppDb._(this._db);
 
@@ -126,15 +45,21 @@ class AppDb {
             strana     TEXT,
             kraj       TEXT,
             okres      TEXT,
-            created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            created_at TEXT DEFAULT
+              (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
           );
         ''');
-
+        await db.execute('''
+          CREATE INDEX IF NOT EXISTS idx_persons_created_at
+          ON persons(created_at);
+        ''');
         await db.execute('''
           CREATE INDEX IF NOT EXISTS idx_persons_kraj_okres
           ON persons(kraj, okres);
         ''');
       },
+      // pripravené pre budúce migrácie
+      onUpgrade: (db, oldV, newV) async {},
     );
 
     _instance = AppDb._(db);
@@ -146,17 +71,41 @@ class AppDb {
     _instance = null;
   }
 
-  // ---------- Lokálne QUERIES (SQLite) ----------
+  // ---------- SQLite QUERIES ----------
 
   Future<List<Person>> getAllPersons() async {
-    final rows = await _db.query('persons', orderBy: 'created_at DESC');
+    final rows = await _db.query(
+      'persons',
+      orderBy: 'created_at DESC',
+    );
     return rows.map(_rowToPerson).toList();
   }
 
   Future<void> insertPerson(Person p) async {
     await _db.insert(
       'persons',
-      {
+      _personToMap(p),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> insertMany(List<Person> items) async {
+    final batch = _db.batch();
+    for (final p in items) {
+      batch.insert(
+        'persons',
+        _personToMap(p),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<int> deleteAll() => _db.delete('persons');
+
+  // ---------- Mappers ----------
+
+  Map<String, Object?> _personToMap(Person p) => {
         'uuid': p.uuid,
         'meno': p.name,
         'priezvisko': p.surname,
@@ -164,47 +113,15 @@ class AppDb {
         'strana': p.party,
         'kraj': p.kraj,
         'okres': p.okres,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
+      };
 
-  Future<int> deleteAll() => _db.delete('persons');
-
-  // ---------- Sync na NAS Postgres ----------
-
-  /// Pošle všetky lokálne osoby do Postgresu (upsert podľa uuid).
-  /// Vráti počet úspešne synchronizovaných riadkov.
-  Future<int> syncToNas() async {
-    final remote = PpDbRemote();
-    int ok = 0;
-
-    final rows = await _db.query('persons');
-
-    try {
-      await remote.open();
-      for (final r in rows) {
-        final p = _rowToPerson(r);
-        await remote.upsertPerson(p);
-        ok++;
-      }
-    } finally {
-      await remote.close();
-    }
-    return ok;
-  }
-
-  // ---------- Mappers ----------
-
-  Person _rowToPerson(Map<String, Object?> r) {
-    return Person(
-      uuid: (r['uuid'] as String?) ?? '',
-      name: (r['meno'] as String?) ?? '',
-      surname: (r['priezvisko'] as String?) ?? '',
-      age: (r['vek'] as int?) ?? 0,
-      party: (r['strana'] as String?) ?? 'Nezadané',
-      kraj: (r['kraj'] as String?) ?? '',
-      okres: (r['okres'] as String?) ?? '',
-    );
-  }
+  Person _rowToPerson(Map<String, Object?> r) => Person(
+        uuid: (r['uuid'] as String?) ?? '',
+        name: (r['meno'] as String?) ?? '',
+        surname: (r['priezvisko'] as String?) ?? '',
+        age: (r['vek'] as int?) ?? 0,
+        party: (r['strana'] as String?) ?? 'Nezadané',
+        kraj: (r['kraj'] as String?) ?? '',
+        okres: (r['okres'] as String?) ?? '',
+      );
 }

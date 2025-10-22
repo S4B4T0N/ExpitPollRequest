@@ -21,7 +21,7 @@ class ScopeToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLeft = value == ScopeSide.left;
     final theme = Theme.of(context);
-    final bg = theme.colorScheme.surface.withOpacity(0.5);
+    final bg = theme.colorScheme.surface.withValues(alpha: 0.5);
     final fg = theme.colorScheme.primary;
 
     return Container(
@@ -29,7 +29,7 @@ class ScopeToggle extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: fg.withOpacity(0.25)),
+        border: Border.all(color: fg.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -64,7 +64,7 @@ class ScopeToggle extends StatelessWidget {
             curve: Curves.easeOut,
             decoration: BoxDecoration(
               color: selected
-                  ? Colors.black.withOpacity(0.06)
+                  ? Colors.black.withValues(alpha: 0.06)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(24),
             ),
