@@ -1,6 +1,5 @@
-// lib/data/world_repository.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'people_store.dart'; // pre Person model (ak je inde, uprav import)
+import 'people_store.dart';
 
 class WorldRepository {
   WorldRepository._();
@@ -12,19 +11,19 @@ class WorldRepository {
         .from('persons')
         .select('uuid, meno, priezvisko, vek, strana, kraj, okres');
 
-    // res je List<dynamic> (mapy)
-    return (res as List)
-        .map((e) => Person(
-              uuid: e['uuid'] as String,
-              name: e['meno'] as String,
-              surname: e['priezvisko'] as String,
-              age: e['vek'] as int,
-              party: (e['strana'] as String?)?.trim().isEmpty ?? true
-                  ? 'Nezadané'
-                  : e['strana'] as String,
-              kraj: e['kraj'] as String,
-              okres: e['okres'] as String,
-            ))
-        .toList();
+    return (res as List).map((e) {
+      final ageRaw = e['vek'];
+      final age = ageRaw is int ? ageRaw : (ageRaw is num ? ageRaw.toInt() : 0);
+      final party = (e['strana'] as String?)?.trim();
+      return Person(
+        uuid: (e['uuid'] as String?) ?? '',
+        name: (e['meno'] as String?) ?? '',
+        surname: (e['priezvisko'] as String?) ?? '',
+        age: age,
+        party: (party == null || party.isEmpty) ? 'Nezadané' : party,
+        kraj: (e['kraj'] as String?) ?? '',
+        okres: (e['okres'] as String?) ?? '',
+      );
+    }).toList();
   }
 }

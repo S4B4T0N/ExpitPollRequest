@@ -1,3 +1,4 @@
+// lib/widgets/glass_card.dart
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
@@ -8,7 +9,6 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -25,9 +25,13 @@ class GlassCard extends StatelessWidget {
                 width: 1,
               ),
             ),
-            color: cs.surface.withValues(alpha: 0.32),
+            color:
+                Theme.of(context).colorScheme.surface.withValues(alpha: 0.32),
             surfaceTintColor: Colors.white,
-            child: Padding(padding: const EdgeInsets.all(20), child: child),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: child,
+            ),
           ),
         ),
       ),

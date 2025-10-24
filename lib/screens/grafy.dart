@@ -1,13 +1,13 @@
-// lib/screens/grafy.dart
+// lib/screens/grafy.dart  (iba vizuálna konzistencia; logika bez zmeny)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pie_chart/pie_chart.dart';
 
+import 'package:exit_poll_request/config/visual/visual.dart';
 import 'package:exit_poll_request/data/app_db.dart';
-import 'package:exit_poll_request/widgets/glass_card.dart';
-import 'package:exit_poll_request/widgets/scope_toggle.dart';
 import 'package:exit_poll_request/data/people_store.dart';
 import 'package:exit_poll_request/data/world_repository.dart';
+import 'package:exit_poll_request/widgets/glass_card.dart';
 
 class GrafyScreen extends StatefulWidget {
   const GrafyScreen({super.key});
@@ -17,7 +17,7 @@ class GrafyScreen extends StatefulWidget {
 }
 
 class _GrafyScreenState extends State<GrafyScreen> {
-  ScopeSide _side = ScopeSide.left; // left=Lokálne, right=World
+  bool _isLocal = true; // true=Local, false=Global
   Future<List<Person>>? _future;
 
   @override
@@ -25,8 +25,6 @@ class _GrafyScreenState extends State<GrafyScreen> {
     super.initState();
     _future = _load();
   }
-
-  bool get _isLocal => _side == ScopeSide.left;
 
   Future<List<Person>> _load() async {
     if (_isLocal) return AppDb.i.getAllPersons();
@@ -112,45 +110,18 @@ class _GrafyScreenState extends State<GrafyScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  GlassCard(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Zdroj dát:',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: ScopeToggle(
-                                value: _side,
-                                leftLabel: 'Lokálne',
-                                rightLabel: 'World',
-                                onChanged: (v) {
-                                  setState(() {
-                                    _side = v;
-                                    _future = _load();
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              _isLocal ? 'Lokálne' : 'World (Cloud)',
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: false,
-                            ),
-                          ),
-                        ],
-                      ),
+                  // segment v jednotnom štýle
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Visual.segmentedLocalGlobal(
+                      context: context,
+                      isLocal: _isLocal,
+                      onChanged: (v) {
+                        setState(() {
+                          _isLocal = v;
+                          _future = _load();
+                        });
+                      },
                     ),
                   ),
                   const SizedBox(height: 12),
