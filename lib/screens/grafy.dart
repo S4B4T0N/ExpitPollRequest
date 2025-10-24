@@ -31,8 +31,6 @@ class _GrafyScreenState extends State<GrafyScreen> {
     return WorldRepository.i.fetchPeople();
   }
 
-  void _reload() => setState(() => _future = _load());
-
   Map<String, double> _byParty(List<Person> xs) {
     final m = <String, double>{};
     for (final p in xs) {
@@ -93,13 +91,7 @@ class _GrafyScreenState extends State<GrafyScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Grafy'),
-        actions: [
-          IconButton(
-            onPressed: _reload,
-            tooltip: 'Obnoviť',
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        actions: [],
       ),
       body: Stack(
         fit: StackFit.expand,
